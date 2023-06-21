@@ -1,24 +1,120 @@
-# Compiled class file
-*.class
+import javafx.animation.AnimationTimer;
+import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
+import javafx.scene.input.KeyCode;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.stage.Stage;
 
-# Log file
-*.log
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
-# BlueJ files
-*.ctxt
+public class CarRaceGame extends Application {
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+    // Set up the game window
+    private static final int WINDOW_WIDTH = 800;
+    private static final int WINDOW_HEIGHT = 600;
 
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
+    // Load images
+    private static final Image CAR_IMAGE = new Image("car.png");
+    private static final int CAR_WIDTH = 50;
+    private static final int CAR_HEIGHT = 100;
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
+    // Load fonts
+    private static final Font SCORE_FONT = new Font("Arial", 30);
+
+    // Set up game variables
+    private int score = 0;
+    private boolean game_over = false;
+
+    // Set up obstacles
+    private static final int OBSTACLE_WIDTH = 50;
+    private static final int OBSTACLE_HEIGHT = 50;
+    private static final int OBSTACLE_SPEED = 5;
+    private List<Obstacle> obstacles = new ArrayList<>();
+
+    // Set up the car
+    private Car car = new Car(WINDOW_WIDTH / 2 - CAR_WIDTH / 2, WINDOW_HEIGHT - CAR_HEIGHT - 10);
+
+    // Game loop
+    private void gameLoop(GraphicsContext gc) {
+        // Handle events
+        car.handleEvents();
+
+        // Move the obstacles
+        for (Obstacle obstacle : obstacles) {
+            obstacle.move();
+            if (obstacle.getY() > WINDOW_HEIGHT) {
+                obstacle.setX(new Random().nextInt(WINDOW_WIDTH - OBSTACLE_WIDTH));
+                obstacle.setY(-OBSTACLE_HEIGHT);
+                score++;
+                obstacle.setSpeed(OBSTACLE_SPEED + score / 10);
+            }
+            if (car.intersects(obstacle)) {
+                game_over = true;
+            }
+        }
+
+        // Draw the game objects
+        gc.setFill(Color.WHITE);
+        gc.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+        car.draw(gc);
+        for (Obstacle obstacle : obstacles) {
+            obstacle.draw(gc);
+        }
+        gc.setFill(Color.BLACK);
+        gc.setFont(SCORE_FONT);
+        gc.fillText("Score: " + score, 10, 30);
+
+        // End the game if necessary
+        if (game_over) {
+            gc.setFill(Color.RED);
+            gc.setFont(SCORE_FONT);
+            gc.fillText("Game Over", WINDOW_WIDTH / 2 - 80, WINDOW_HEIGHT / 2);
+            return;
+        }
+
+        // Update the display
+        new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                gc.clearRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+                gc.setFill(Color.WHITE);
+                gc.fillRect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+                car.draw(gc);
+                for (Obstacle obstacle : obstacles) {
+                    obstacle.draw(gc);
+                }
+                gc.setFill(Color.BLACK);
+                gc.setFont(SCORE_FONT);
+                gc.fillText("Score: " + score, 10, 30);
+            }
+        }.start();
+    }
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        // Set up the game window
+        primaryStage.setTitle("Car Race Game");
+        Group root = new Group();
+        Scene scene = new Scene(root);
+        primaryStage.setScene(scene);
+        Canvas canvas = new Canvas(WINDOW_WIDTH, WINDOW_HEIGHT);
+        root.getChildren().add(canvas);
+        GraphicsContext gc = canvas.getGraphicsContext2D();
+
+        // Set up the obstacles
+        for (int i = 0; i < 5; i++) {
+            obstacles.add(new Obstacle(new Random().nextInt(WINDOW_WIDTH - OBSTACLE_WIDTH), -OBSTACLE_HEIGHT, OBSTACLE_WIDTH, OBSTACLE_HEIGHT, OBSTACLE_SPEED));
+        }
+
+        // Start the game loop
+        new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                gameLoop(gc);
